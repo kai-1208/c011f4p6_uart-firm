@@ -20,8 +20,6 @@
 #include "main.h"
 #include "usart.h"
 #include "gpio.h"
-#include "stdio.h"
-#include "string.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -99,15 +97,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    uint8_t pwr_pA4 = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) == GPIO_PIN_SET) ? 1 : 0;
-    uint8_t pwr_pA5 = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == GPIO_PIN_SET) ? 1 : 0;
-    uint8_t pwr_pA6 = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6) == GPIO_PIN_SET) ? 1 : 0;
 
-    int len = snprintf(tx_buf, sizeof(tx_buf), "PWR:%d,%d,%d\r\n", pwr_pA4, pwr_pA5, pwr_pA6);
-
-    HAL_UART_Transmit(&huart2, (uint8_t*)tx_buf, len, 100);
-
-    HAL_Delay(10);
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
