@@ -23,7 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stdio.h"
+#include "stdbool.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -44,7 +45,33 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+// デバウンス用構造体
+typedef struct {
+    bool stable_state;    // 確定した論理値 (true / false)
+    uint8_t count;        // 連続一致カウンタ
+} DebouncePin_t;
 
+// チャタリング除去パラメータ
+// 5ms周期でサンプリングし、4回連続一致 (5ms * 4 = 20ms) で状態確定
+#define DEBOUNCE_THRESHOLD 4 
+
+static DebouncePin_t deb_pa4 = {false, 0};
+static DebouncePin_t deb_pa5 = {false, 0};
+static DebouncePin_t deb_pa6 = {false, 0};
+
+// チャタリング除去関数
+bool UpdateDebounce(DebouncePin_t *pin, bool raw_state) {
+    if (raw_state != pin->stable_state) {
+        pin->count++;
+        if (pin->count >= DEBOUNCE_THRESHOLD) {
+            pin->stable_state = raw_state; // 閾値を超えたら確定状態を更新
+            pin->count = 0;
+        }
+    } else {
+        pin->count = 0; // 生値が確定値と同じならカウンタをリセット
+    }
+    return pin->stable_state;
+}
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -90,12 +117,44 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   char tx_buf[64];
+  uint32_t last_uart_tick = 0;
+
+  deb_pa4.stable_state = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) == GPIO_PIN_SET);
+  deb_pa5.stable_state = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == GPIO_PIN_SET);
+  deb_pa6.stable_state = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6) == GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    // 1. 各ピンの生値（Highならtrue, Lowならfalse）を読み取る
+    bool raw_pa4 = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_4) == GPIO_PIN_SET);
+    bool raw_pa5 = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_5) == GPIO_PIN_SET);
+    bool raw_pa6 = (HAL_GPIO_ReadPin(GPIOA, GPIO_PIN_6) == GPIO_PIN_SET);
+
+    // 2. チャタリングを除去した確定値を取得
+    bool pa4 = UpdateDebounce(&deb_pa4, raw_pa4);
+    bool pa5 = UpdateDebounce(&deb_pa5, raw_pa5);
+    bool pa6 = UpdateDebounce(&deb_pa6, raw_pa6);
+
+    // 3. 【判定】どれか1つでもfalse（電源断/Low）ならアラート信号を出す
+    bool alert_signal = (!pa4 || !pa5 || !pa6);
+
+    // 4. PA1 に出力 (アラート時は High、すべて正常時は Low)
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_1, alert_signal ? GPIO_PIN_SET : GPIO_PIN_RESET);
+
+    // 5. UART 送信（チャタリング除去後の値を100ms周期で送信）
+    uint32_t now = HAL_GetTick();
+    if ((now - last_uart_tick) >= 100) {
+        last_uart_tick = now;
+        int len = snprintf(tx_buf, sizeof(tx_buf), "PWR:%d,%d,%d\r\n", 
+                           pa4 ? 1 : 0, pa5 ? 1 : 0, pa6 ? 1 : 0);
+        HAL_UART_Transmit(&huart2, (uint8_t*)tx_buf, len, 50);
+    }
+
+    // デバウンス用のサンプリング間隔 (5ms)
+    HAL_Delay(5);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
