@@ -11,3 +11,11 @@ uartは、usart2を使用しており、PA2をtx, PA3をrxに設定しており�
 - ConnectivityのUSART2で、ModeをAsynchronousに設定、Parameter SettingsのBaud Rateを9600bpsに設定
 - Trace and DebugでSerial Wireを有効にする
 - Clock ConfigurationでInput frequencyを16Mhz, System Clock MuxをHSE, HLCKを16Mhzに設定してReslove Clock Issues
+
+## 別branch(feature/gpio-or-output)について
+このbranchでは、送信方式と送る値を変更したものとなっております。pa4, pa5, pa6の入力値を受け取り、その値からどれか1つでもfalseであればpa1から信号を送信するようになっています。
+
+### cubemxの設定
+元branchから追加でpa1のgpio設定のみ行います。
+- Pinout ViewでPA1をGPIO_Ouputⅱ設定
+- System CoreのGPIOでGPIOタブを開き、PA1を選択し、GPIO output levelがlowになっていることを確認する
