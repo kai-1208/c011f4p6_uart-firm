@@ -17,5 +17,5 @@ uartは、usart2を使用しており、PA2をtx, PA3をrxに設定しており�
 
 ### cubemxの設定
 元branchから追加でpa1のgpio設定のみ行います。
-- Pinout ViewでPA1をGPIO_Ouputⅱ設定
+- Pinout ViewでPA1をGPIO_Ouputに設定
 - System CoreのGPIOでGPIOタブを開き、PA1を選択し、GPIO output levelがlowになっていることを確認する
